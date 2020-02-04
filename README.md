@@ -1,3 +1,12 @@
+
+## Forked Notice:
+
+```
+FanDuel modifications to this project have been applied to the 'FanDuel' Branch. 
+This repository is pulled down to our repository via yarn in-place of the official repository.
+
+```
+
 ## react-native-video
 
 A `<Video>` component for react-native, as seen in
