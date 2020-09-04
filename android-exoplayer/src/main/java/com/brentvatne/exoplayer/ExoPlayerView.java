@@ -220,6 +220,8 @@ public final class ExoPlayerView extends FrameLayout {
             if (isInitialRatio) {
                 post(measureAndLayout);
             }
+
+            setKeepScreenOn(true);
         }
 
         @Override
