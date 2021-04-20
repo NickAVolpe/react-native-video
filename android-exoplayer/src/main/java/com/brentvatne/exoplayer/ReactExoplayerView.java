@@ -227,6 +227,7 @@ class ReactExoplayerView extends FrameLayout implements
                 LayoutParams.MATCH_PARENT);
         exoPlayerView = new ExoPlayerView(getContext());
         exoPlayerView.setLayoutParams(layoutParams);
+        exoPlayerView.setFocusable(false);
 
         addView(exoPlayerView, 0, layoutParams);
 
@@ -415,19 +416,19 @@ class ReactExoplayerView extends FrameLayout implements
                             new DefaultRenderersFactory(getContext())
                                     .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER);
                     // DRM
-                    DrmSessionManager<FrameworkMediaCrypto> drmSessionManager = null;
-                    if (self.drmUUID != null) {
-                        try {
-                            drmSessionManager = buildDrmSessionManager(self.drmUUID, self.drmLicenseUrl,
-                                    self.drmLicenseHeader);
-                        } catch (UnsupportedDrmException e) {
-                            int errorStringId = Util.SDK_INT < 18 ? R.string.error_drm_not_supported
-                                    : (e.reason == UnsupportedDrmException.REASON_UNSUPPORTED_SCHEME
-                                    ? R.string.error_drm_unsupported_scheme : R.string.error_drm_unknown);
-                            eventEmitter.error(getResources().getString(errorStringId), e);
-                            return;
-                        }
-                    }
+//                    DrmSessionManager<FrameworkMediaCrypto> drmSessionManager = null;
+//                    if (self.drmUUID != null) {
+//                        try {
+//                            drmSessionManager = buildDrmSessionManager(self.drmUUID, self.drmLicenseUrl,
+//                                    self.drmLicenseHeader);
+//                        } catch (UnsupportedDrmException e) {
+//                            int errorStringId = Util.SDK_INT < 18 ? R.string.error_drm_not_supported
+//                                    : (e.reason == UnsupportedDrmException.REASON_UNSUPPORTED_SCHEME
+//                                    ? R.string.error_drm_unsupported_scheme : R.string.error_drm_unknown);
+//                            eventEmitter.error(getResources().getString(errorStringId), e);
+//                            return;
+//                        }
+//                    }
                     // End DRM
 //                    player = ExoPlayerFactory.newSimpleInstance(getContext(), renderersFactory,
 //                            trackSelector, defaultLoadControl, drmSessionManager, bandwidthMeter);
@@ -489,22 +490,22 @@ class ReactExoplayerView extends FrameLayout implements
         }, 1);
     }
 
-    private DrmSessionManager<FrameworkMediaCrypto> buildDrmSessionManager(UUID uuid,
-                                                                           String licenseUrl, String[] keyRequestPropertiesArray) throws UnsupportedDrmException {
-        if (Util.SDK_INT < 18) {
-            return null;
-        }
-        HttpMediaDrmCallback drmCallback = new HttpMediaDrmCallback(licenseUrl,
-                buildHttpDataSourceFactory(false));
-        if (keyRequestPropertiesArray != null) {
-            for (int i = 0; i < keyRequestPropertiesArray.length - 1; i += 2) {
-                drmCallback.setKeyRequestProperty(keyRequestPropertiesArray[i],
-                        keyRequestPropertiesArray[i + 1]);
-            }
-        }
-        return new DefaultDrmSessionManager<>(uuid,
-                FrameworkMediaDrm.newInstance(uuid), drmCallback, null, false, 3);
-    }
+//    private DrmSessionManager<FrameworkMediaCrypto> buildDrmSessionManager(UUID uuid,
+//                                                                           String licenseUrl, String[] keyRequestPropertiesArray) throws UnsupportedDrmException {
+//        if (Util.SDK_INT < 18) {
+//            return null;
+//        }
+//        HttpMediaDrmCallback drmCallback = new HttpMediaDrmCallback(licenseUrl,
+//                buildHttpDataSourceFactory(false));
+//        if (keyRequestPropertiesArray != null) {
+//            for (int i = 0; i < keyRequestPropertiesArray.length - 1; i += 2) {
+//                drmCallback.setKeyRequestProperty(keyRequestPropertiesArray[i],
+//                        keyRequestPropertiesArray[i + 1]);
+//            }
+//        }
+//        return new DefaultDrmSessionManager<>(uuid,
+//                FrameworkMediaDrm.newInstance(uuid), drmCallback, null, false, 3);
+//    }
 
     private MediaSource buildMediaSource(Uri uri, String overrideExtension) {
         int type = Util.inferContentType(!TextUtils.isEmpty(overrideExtension) ? "." + overrideExtension
@@ -684,15 +685,16 @@ class ReactExoplayerView extends FrameLayout implements
      *     DataSource factory.
      * @return A new HttpDataSource factory.
      */
-    private HttpDataSource.Factory buildHttpDataSourceFactory(boolean useBandwidthMeter) {
-        return DataSourceUtil.getDefaultHttpDataSourceFactory(this.themedReactContext, useBandwidthMeter ? bandwidthMeter : null, requestHeaders);
-    }
+//    private HttpDataSource.Factory buildHttpDataSourceFactory(boolean useBandwidthMeter) {
+//        return DataSourceUtil.getDefaultHttpDataSourceFactory(this.themedReactContext, useBandwidthMeter ? bandwidthMeter : null, requestHeaders);
+//    }
 
 
     // AudioManager.OnAudioFocusChangeListener implementation
 
     @Override
     public void onAudioFocusChange(int focusChange) {
+        // todo - https://github.com/react-native-video/react-native-video/pull/2311/files
         switch (focusChange) {
             case AudioManager.AUDIOFOCUS_LOSS:
                 eventEmitter.audioFocusChanged(false);
