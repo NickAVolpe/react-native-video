@@ -103,8 +103,6 @@ public final class ExoPlayerView extends FrameLayout {
         }
         layout.addView(surfaceView, 0, layoutParams);
 
-        Log.d("RN-VIDEO", "updateSurfaceView");
-
         if (this.player != null) {
             setVideoView();
         }
@@ -147,7 +145,6 @@ public final class ExoPlayerView extends FrameLayout {
      * @param resizeMode The resize mode.
      */
     public void setResizeMode(@ResizeMode.Mode int resizeMode) {
-        Log.d("RN-Video", "setResizeMode");
         if (layout.getResizeMode() != resizeMode) {
             layout.setResizeMode(resizeMode);
             post(measureAndLayout);
@@ -182,18 +179,6 @@ public final class ExoPlayerView extends FrameLayout {
             measure(
                     MeasureSpec.makeMeasureSpec(getWidth(), MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(getHeight(), MeasureSpec.EXACTLY));
-
-            String leftM = String.format("%d", getLeft());
-            String topM = String.format("%d", getTop());
-            String rightM = String.format("%d", getRight());
-            String bottomM = String.format("%d", getBottom());
-
-
-            Log.d("RN-VIDEO", "measureAndLayout");
-            Log.d("RN-VIDEO", "left " + leftM);
-            Log.d("RN-VIDEO", "top " + topM);
-            Log.d("RN-VIDEO", "right " + rightM);
-            Log.d("RN-VIDEO", "bottom " + bottomM);
             layout(getLeft(), getTop(), getRight(), getBottom());
             layout(getLeft(), getTop(), getRight(), getBottom());
         }
@@ -237,11 +222,8 @@ public final class ExoPlayerView extends FrameLayout {
             boolean isInitialRatio = layout.getAspectRatio() == 0;
             layout.setAspectRatio(height == 0 ? 1 : (width * pixelWidthHeightRatio) / height);
 
-            Log.d("RN-VIDEO", "onVideoSizeChanged");
-
             // React native workaround for measuring and layout on initial load.
             if (isInitialRatio) {
-                Log.d("RN-VIDEO", "isInitialRatio");
                 post(measureAndLayout);
             }
         }
