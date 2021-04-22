@@ -29,6 +29,7 @@ import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.DefaultRenderersFactory;
 import com.google.android.exoplayer2.ExoPlaybackException;
+import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
@@ -410,7 +411,7 @@ class ReactExoplayerView extends FrameLayout implements
                     DefaultLoadControl defaultLoadControl = defaultLoadControlBuilder.createDefaultLoadControl();
                     DefaultRenderersFactory renderersFactory =
                             new DefaultRenderersFactory(getContext())
-                                    .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER);
+                                    .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF);
 
                     // DRM
                     DrmSessionManager<FrameworkMediaCrypto> drmSessionManager = null;
@@ -578,6 +579,7 @@ class ReactExoplayerView extends FrameLayout implements
     private boolean requestAudioFocus() {
         // Bug with AudioFocus on Amazon FireStick
         // The request seems to block scrubbing actions and causes playback issues
+        // https://github.com/react-native-video/react-native-video/pull/2311
         return true;
 //        if (disableFocus || srcUri == null) {
 //            return true;
