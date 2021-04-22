@@ -3,6 +3,7 @@ package com.brentvatne.exoplayer;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Message;
@@ -33,7 +34,13 @@ import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
+import com.google.android.exoplayer2.drm.DefaultDrmSessionManager;
 import com.google.android.exoplayer2.drm.DefaultDrmSessionEventListener;
+import com.google.android.exoplayer2.drm.DrmSessionManager;
+import com.google.android.exoplayer2.drm.FrameworkMediaCrypto;
+import com.google.android.exoplayer2.drm.FrameworkMediaDrm;
+import com.google.android.exoplayer2.drm.HttpMediaDrmCallback;
+import com.google.android.exoplayer2.drm.UnsupportedDrmException;
 import com.google.android.exoplayer2.mediacodec.MediaCodecRenderer;
 import com.google.android.exoplayer2.mediacodec.MediaCodecUtil;
 import com.google.android.exoplayer2.metadata.Metadata;
@@ -77,6 +84,7 @@ class ReactExoplayerView extends FrameLayout implements
         Player.EventListener,
         BandwidthMeter.EventListener,
         BecomingNoisyListener,
+        AudioManager.OnAudioFocusChangeListener,
         MetadataOutput,
         DefaultDrmSessionEventListener {
 
@@ -151,6 +159,7 @@ class ReactExoplayerView extends FrameLayout implements
 
     // React
     private final ThemedReactContext themedReactContext;
+    private final AudioManager audioManager;
     private final AudioBecomingNoisyReceiver audioBecomingNoisyReceiver;
 
     private final Handler progressHandler = new Handler() {
@@ -190,6 +199,7 @@ class ReactExoplayerView extends FrameLayout implements
 
         createViews();
 
+        audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         themedReactContext.addLifecycleEventListener(this);
         audioBecomingNoisyReceiver = new AudioBecomingNoisyReceiver(themedReactContext);
     }
@@ -401,6 +411,23 @@ class ReactExoplayerView extends FrameLayout implements
                     DefaultRenderersFactory renderersFactory =
                             new DefaultRenderersFactory(getContext())
                                     .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER);
+
+                    // DRM
+                    DrmSessionManager<FrameworkMediaCrypto> drmSessionManager = null;
+                    if (self.drmUUID != null) {
+                        try {
+                            drmSessionManager = buildDrmSessionManager(self.drmUUID, self.drmLicenseUrl,
+                                    self.drmLicenseHeader);
+                        } catch (UnsupportedDrmException e) {
+                            int errorStringId = Util.SDK_INT < 18 ? R.string.error_drm_not_supported
+                                    : (e.reason == UnsupportedDrmException.REASON_UNSUPPORTED_SCHEME
+                                    ? R.string.error_drm_unsupported_scheme : R.string.error_drm_unknown);
+                            eventEmitter.error(getResources().getString(errorStringId), e);
+                            return;
+                        }
+                    }
+                    // End DRM
+
                     player =
                             new SimpleExoPlayer.Builder(/* context= */ getContext(), renderersFactory)
                                     .setTrackSelector(trackSelector)
@@ -452,6 +479,23 @@ class ReactExoplayerView extends FrameLayout implements
                 applyModifiers();
             }
         }, 1);
+    }
+
+    private DrmSessionManager<FrameworkMediaCrypto> buildDrmSessionManager(UUID uuid,
+                                                                           String licenseUrl, String[] keyRequestPropertiesArray) throws UnsupportedDrmException {
+        if (Util.SDK_INT < 18) {
+            return null;
+        }
+        HttpMediaDrmCallback drmCallback = new HttpMediaDrmCallback(licenseUrl,
+                buildHttpDataSourceFactory(false));
+        if (keyRequestPropertiesArray != null) {
+            for (int i = 0; i < keyRequestPropertiesArray.length - 1; i += 2) {
+                drmCallback.setKeyRequestProperty(keyRequestPropertiesArray[i],
+                        keyRequestPropertiesArray[i + 1]);
+            }
+        }
+        return new DefaultDrmSessionManager<>(uuid,
+                FrameworkMediaDrm.newInstance(uuid), drmCallback, null, false, 3);
     }
 
     private MediaSource buildMediaSource(Uri uri, String overrideExtension) {
@@ -531,13 +575,29 @@ class ReactExoplayerView extends FrameLayout implements
         bandwidthMeter.removeEventListener(this);
     }
 
+    private boolean requestAudioFocus() {
+        // Bug with AudioFocus on Amazon FireStick
+        // The request seems to block scrubbing actions and causes playback issues
+        return true;
+//        if (disableFocus || srcUri == null) {
+//            return true;
+//        }
+//        int result = audioManager.requestAudioFocus(this,
+//                AudioManager.STREAM_MUSIC,
+//                AudioManager.AUDIOFOCUS_GAIN);
+//        return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+    }
+
     private void setPlayWhenReady(boolean playWhenReady) {
         if (player == null) {
             return;
         }
 
         if (playWhenReady) {
-            player.setPlayWhenReady(true);
+            boolean hasAudioFocus = requestAudioFocus();
+            if (hasAudioFocus) {
+                player.setPlayWhenReady(true);
+            }
         } else {
             player.setPlayWhenReady(false);
         }
@@ -586,6 +646,7 @@ class ReactExoplayerView extends FrameLayout implements
         if (isFullscreen) {
             setFullscreen(false);
         }
+        audioManager.abandonAudioFocus(this);
     }
 
     private void updateResumePosition() {
@@ -620,6 +681,40 @@ class ReactExoplayerView extends FrameLayout implements
      */
     private HttpDataSource.Factory buildHttpDataSourceFactory(boolean useBandwidthMeter) {
         return DataSourceUtil.getDefaultHttpDataSourceFactory(this.themedReactContext, useBandwidthMeter ? bandwidthMeter : null, requestHeaders);
+    }
+
+    // AudioManager.OnAudioFocusChangeListener implementation
+    @Override
+    public void onAudioFocusChange(int focusChange) {
+        switch (focusChange) {
+            case AudioManager.AUDIOFOCUS_LOSS:
+                eventEmitter.audioFocusChanged(false);
+                pausePlayback();
+                audioManager.abandonAudioFocus(this);
+                break;
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+                eventEmitter.audioFocusChanged(false);
+                break;
+            case AudioManager.AUDIOFOCUS_GAIN:
+                eventEmitter.audioFocusChanged(true);
+                break;
+            default:
+                break;
+        }
+
+        if (player != null) {
+            if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
+                // Lower the volume
+                if (!muted) {
+                    player.setVolume(audioVolume * 0.8f);
+                }
+            } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
+                // Raise it back to normal
+                if (!muted) {
+                    player.setVolume(audioVolume * 1);
+                }
+            }
+        }
     }
 
     // AudioBecomingNoisyListener implementation

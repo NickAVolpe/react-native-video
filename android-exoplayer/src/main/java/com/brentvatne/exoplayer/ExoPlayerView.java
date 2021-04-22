@@ -180,7 +180,6 @@ public final class ExoPlayerView extends FrameLayout {
                     MeasureSpec.makeMeasureSpec(getWidth(), MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(getHeight(), MeasureSpec.EXACTLY));
             layout(getLeft(), getTop(), getRight(), getBottom());
-            layout(getLeft(), getTop(), getRight(), getBottom());
         }
     };
 
