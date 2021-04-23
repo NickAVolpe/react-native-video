@@ -130,7 +130,7 @@ public final class ExoPlayerView extends FrameLayout {
             this.player.setVideoSurface(null);
         }
         this.player = player;
-        shutterView.setVisibility(VISIBLE);
+        shutterView.setVisibility(INVISIBLE);
         if (player != null) {
             setVideoView();
             player.setVideoListener(componentListener);
@@ -149,7 +149,6 @@ public final class ExoPlayerView extends FrameLayout {
             layout.setResizeMode(resizeMode);
             post(measureAndLayout);
         }
-
     }
 
     /**
